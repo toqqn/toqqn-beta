@@ -87,6 +87,61 @@ contract Ownable {
 
 }
 
+contract Pausable is Ownable {
+  event Pause();
+  event Unpause();
+
+  bool public paused = false;
+
+
+  /**
+   * @dev Modifier to make a function callable only when the contract is not paused.
+   */
+  modifier whenNotPaused() {
+    require(!paused);
+    _;
+  }
+
+  /**
+   * @dev Modifier to make a function callable only when the contract is paused.
+   */
+  modifier whenPaused() {
+    require(paused);
+    _;
+  }
+
+  /**
+   * @dev called by the owner to pause, triggers stopped state
+   */
+  function pause() onlyOwner whenNotPaused public {
+    paused = true;
+    Pause();
+  }
+
+  /**
+   * @dev called by the owner to unpause, returns to normal state
+   */
+  function unpause() onlyOwner whenPaused public {
+    paused = false;
+    Unpause();
+  }
+}
+
+contract Destructible is Ownable {
+
+  function Destructible() public payable { }
+
+  /**
+   * @dev Transfers the current balance to the owner and terminates the contract.
+   */
+  function destroy() onlyOwner public {
+    selfdestruct(owner);
+  }
+
+  function destroyAndSend(address _recipient) onlyOwner public {
+    selfdestruct(_recipient);
+  }
+}
 
 contract ERC20Basic {
   function totalSupply() public view returns (uint256);
@@ -267,7 +322,7 @@ contract StandardToken is ERC20, BasicToken {
  * Proxy
  */
 
-contract Proxy is Ownable {
+contract Proxy is Ownable, Destructible, Pausable {
     // crowdsale contract
     Crowdsale public crowdsale;
 
@@ -299,7 +354,7 @@ contract Proxy is Ownable {
  * TOQQN Token
  */
 
-contract ToqqnBeta is StandardToken, BurnableToken, DetailedERC20 {
+contract ToqqnBeta is StandardToken, BurnableToken, DetailedERC20, Destructible {
     function ToqqnBeta(string _name, string _symbol, uint8 _decimals, uint256 _totalSupply)
         DetailedERC20(_name, _symbol, _decimals) public
         {
@@ -321,7 +376,7 @@ contract ToqqnBeta is StandardToken, BurnableToken, DetailedERC20 {
  * TOQQN Crowdsale
  */
 
-contract Crowdsale is Ownable {
+contract Crowdsale is Ownable, Pausable, Destructible {
     using SafeMath for uint256;
 
     struct Vault {
